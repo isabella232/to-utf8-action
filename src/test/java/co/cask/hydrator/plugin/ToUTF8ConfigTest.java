@@ -39,7 +39,7 @@ public class ToUTF8ConfigTest {
   private static final String UTF_8_FILE_NAME = "/20150320_clo_prod_cln.dat.utf8";
 
   private FileFilter filter = new FileFilter() {
-    private final Pattern pattern = Pattern.compile(".*\\.utf8");
+    private final Pattern pattern = Pattern.compile("[^\\.].*\\.utf8");
 
     @Override
     public boolean accept(File pathname) {
@@ -51,12 +51,40 @@ public class ToUTF8ConfigTest {
   public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void testIfBothKeysAndRoleIsNotPresent() throws Exception {
+  public void testSingleFile() throws Exception {
     URL iso88591File = this.getClass().getResource(ISO_8859_FILE_NAME);
     File destFolder = temporaryFolder.newFolder();
     ToUTF8Action.ToUTF8Config config = new ToUTF8Action.ToUTF8Config(iso88591File.getFile(),
                                                                      destFolder.getPath() + UTF_8_FILE_NAME,
                                                                      null, "ISO-8859-1", false);
+    MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
+    new ToUTF8Action(config).configurePipeline(configurer);
+    new ToUTF8Action(config).run(null);
+    assertEquals(UTF_8_FILE_NAME, "/" + destFolder.listFiles(filter)[0].getName());
+  }
+
+  @Test
+  public void testFolder() throws Exception {
+    URL iso88591File = this.getClass().getResource(ISO_8859_FILE_NAME);
+
+    File destFolder = temporaryFolder.newFolder();
+    ToUTF8Action.ToUTF8Config config = new ToUTF8Action.ToUTF8Config(new File(iso88591File.getFile()).getParent(),
+                                                                     destFolder.getPath(),
+                                                                     null, "ISO-8859-1", false);
+    MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
+    new ToUTF8Action(config).configurePipeline(configurer);
+    new ToUTF8Action(config).run(null);
+    assertEquals(UTF_8_FILE_NAME, "/" + destFolder.listFiles(filter)[0].getName());
+  }
+
+  @Test
+  public void testFolderWithRegEx() throws Exception {
+    URL iso88591File = this.getClass().getResource(ISO_8859_FILE_NAME);
+
+    File destFolder = temporaryFolder.newFolder();
+    ToUTF8Action.ToUTF8Config config = new ToUTF8Action.ToUTF8Config(new File(iso88591File.getFile()).getParent(),
+                                                                     destFolder.getPath(),
+                                                                     ".*\\.dat", "ISO-8859-1", false);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
     new ToUTF8Action(config).configurePipeline(configurer);
     new ToUTF8Action(config).run(null);

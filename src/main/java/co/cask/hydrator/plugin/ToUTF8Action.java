@@ -107,15 +107,17 @@ public class ToUTF8Action extends Action {
       fileSystem.mkdirs(dest);
 
       for (FileStatus file : listFiles) {
-        source = file.getPath();
-        convertSingleFile(source, new Path(dest.toString() + source.getName() + ".utf8"), fileSystem);
+        if (!file.isDirectory()) { // ignore directories
+          source = file.getPath();
+          convertSingleFile(source, dest, fileSystem);
+        }
       }
     }
   }
 
   private void convertSingleFile(Path source, Path dest, FileSystem fileSystem) throws IOException {
     Path actualDestPath = (fileSystem.isDirectory(dest))
-      ? new Path(dest.toString() + source.getName() + ".utf8")
+      ? new Path(dest.toString() + "/" + source.getName() + ".utf8")
       : dest;
     try (InputStream in = fileSystem.open(source);
          BufferedOutputStream out = new BufferedOutputStream(fileSystem.create(actualDestPath), BUFFER_SIZE)) {
