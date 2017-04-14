@@ -1,11 +1,11 @@
-==========================
-RedshiftToS3 Action Plugin
-==========================
+======================
+To UTF-8 Action Plugin
+======================
 
 Introduction
 ============
-RedshiftToS3 Action that unloads the result of a query from redshift to one or more files on Amazon Simple Storage
-Service (Amazon S3).
+The To UTF-8 Action is used to convert files created in other character sets
+into UTF-8 format so that they can be processed using standard Hadoop Text Input Formats.
 
 Getting Started
 ===============
@@ -16,10 +16,10 @@ CDAP version 3.5.x or higher.
 
 Building Plugins
 ----------------
-You get started with RedshiftToS3 action plugin by building directly from the latest source code::
+You get started with To UTF-8 action plugin by building directly from the latest source code::
 
-   git clone git@github.com:hydrator/redshifttos3-action.git
-   cd redshifttos3-action
+   git clone git@github.com:hydrator/to-utf8-action.git
+   cd to-utf8-action
    mvn clean package
 
 After the build completes, you will have a JAR for each plugin under each
@@ -31,8 +31,8 @@ You can deploy a plugin using the CDAP CLI::
 
   > load artifact <target/plugin-jar> config-file <resources/plugin-config>
 
-  > load artifact target/redshifttos3-action-plugin-<version>.jar \
-         config-file target/redshifttos3-action-plugin-<version>.json
+  > load artifact target/to-utf8-action-plugin-<version>.jar \
+         config-file target/to-utf8-action-plugin-<version>.json
 
 You can build without running tests: ``mvn clean install -DskipTests``
 
