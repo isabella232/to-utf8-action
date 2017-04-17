@@ -18,13 +18,12 @@ Properties
 ----------
 **Source Path:** The full path of the file or directory that is to be converted. In the case of a directory, if
 fileRegex is set, then only files in the source directory matching the regex expression will be moved.
-Otherwise, all files in the directory will be moved. For example: `hdfs://hostname/tmp`. (Macro-Enabled)
+Otherwise, all files in the directory will be moved. For example: `hdfs://hostname/tmp`. You can use globbing syntax here. (Macro-Enabled)
 
 **Destination Path:** The full path where the file or files are to be saved.
 If a directory is specified the files will be created in that directory. If the Source Path is
-a directory, it is assumed that Destination Path is also a directory. Defaults to the Source Path 
-if not specified. The new files will have ``.utf8`` appended to the end. Files with the same name will 
-be overwritten. (Macro-Enabled)
+a directory, it is assumed that Destination Path is also a directory. The new files will have ``.utf8`` appended to the end. 
+Files with the same name will be overwritten. (Macro-Enabled)
 
 **File Regular Expression:** Regular expression to filter the files in the source directory that will be moved. (Macro-Enabled)
 
