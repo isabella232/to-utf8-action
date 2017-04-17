@@ -25,9 +25,7 @@ import co.cask.cdap.api.plugin.PluginConfig;
 import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.cdap.etl.api.action.Action;
 import co.cask.cdap.etl.api.action.ActionContext;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.io.ByteStreams;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
@@ -79,7 +78,7 @@ public class ToUTF8Action extends Action {
     fileSystem.mkdirs(dest.getParent());
 
     // Convert a single file
-    if (fileSystem.getFileStatus(source).isFile()) {
+    if (fileSystem.exists(source) && fileSystem.getFileStatus(source).isFile()) {
       convertSingleFile(source, dest, fileSystem);
     } else {
       // Convert all the files in a directory
@@ -91,14 +90,18 @@ public class ToUTF8Action extends Action {
           return pattern.matcher(path.getName()).matches();
         }
       };
-      FileStatus[] listFiles = fileSystem.listStatus(source, filter);
+      FileStatus[] listFiles = fileSystem.globStatus(source, filter);
+      if (listFiles == null || listFiles.length == 0 || (listFiles.length == 1 && listFiles[0].isDirectory())) {
+        // try again without globbing action
+        listFiles = fileSystem.listStatus(source, filter);
+      }
 
       if (listFiles.length == 0) {
         LOG.warn("Not converting any files from source {} matching regular expression",
                  source.toString(), config.fileRegex);
       }
 
-      if (fileSystem.isFile(dest)) {
+      if (fileSystem.exists(dest) && fileSystem.isFile(dest)) {
         throw new IllegalArgumentException(
           String.format("Destination %s needs to be a directory since the source is a " +
                           "directory", config.destFilePath));
@@ -107,15 +110,17 @@ public class ToUTF8Action extends Action {
       fileSystem.mkdirs(dest);
 
       for (FileStatus file : listFiles) {
-        source = file.getPath();
-        convertSingleFile(source, new Path(dest.toString() + source.getName() + ".utf8"), fileSystem);
+        if (!file.isDirectory()) { // ignore directories
+          source = file.getPath();
+          convertSingleFile(source, dest, fileSystem);
+        }
       }
     }
   }
 
   private void convertSingleFile(Path source, Path dest, FileSystem fileSystem) throws IOException {
     Path actualDestPath = (fileSystem.isDirectory(dest))
-      ? new Path(dest.toString() + source.getName() + ".utf8")
+      ? new Path(dest.toString() + "/" + source.getName() + ".utf8")
       : dest;
     try (InputStream in = fileSystem.open(source);
          BufferedOutputStream out = new BufferedOutputStream(fileSystem.create(actualDestPath), BUFFER_SIZE)) {
@@ -140,12 +145,11 @@ public class ToUTF8Action extends Action {
    */
   public static class ToUTF8Config extends PluginConfig {
     @Macro
-    @Description("The source location where the file or files live.")
+    @Description("The source location where the file or files live. You can use glob syntax here such as *.dat.")
     private String sourceFilePath;
 
     @Macro
-    @Nullable
-    @Description("The destination location where the converted files should be. Defaults to the sourceFilePath.")
+    @Description("The destination location where the converted files should be.")
     private String destFilePath;
 
     @Macro
@@ -163,11 +167,11 @@ public class ToUTF8Action extends Action {
     private Boolean continueOnError;
 
 
-    public ToUTF8Config(String sourceFilePath, @Nullable String destFilePath, @Nullable String fileRegex,
+    public ToUTF8Config(String sourceFilePath, String destFilePath, @Nullable String fileRegex,
                         String charset, @Nullable Boolean continueOnError) {
       this.sourceFilePath = sourceFilePath;
       this.charset = charset;
-      this.destFilePath = (Strings.isNullOrEmpty(destFilePath)) ? sourceFilePath : destFilePath;
+      this.destFilePath = destFilePath;
       this.continueOnError = (continueOnError == null) ? false : continueOnError;
       this.fileRegex = (Strings.isNullOrEmpty(fileRegex)) ? ".*" : fileRegex;
     }
@@ -175,8 +179,31 @@ public class ToUTF8Action extends Action {
     /**
      * Validates the config parameters required for unloading the data.
      */
-    private void validate() {
-
+    private void validate() throws IllegalArgumentException {
+      try {
+        Charset.forName(charset);
+      } catch (UnsupportedCharsetException e) {
+        throw new IllegalArgumentException("The charset entered is not valid. Please use a value " +
+                     "from https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html.", e);
+      }
+      try {
+        Pattern.compile(fileRegex);
+      } catch (Exception e) {
+        throw new IllegalArgumentException("The regular expression pattern provided is not a valid " +
+                                             "regular expression.", e);
+      }
+      if (Strings.isNullOrEmpty(sourceFilePath)) {
+        throw new IllegalArgumentException("Source file or folder is required.");
+      }
+      if (Strings.isNullOrEmpty(destFilePath)) {
+        throw new IllegalArgumentException("Destination file or folder is required.");
+      }
+      try {
+        Path source = new Path(sourceFilePath);
+        FileSystem fileSystem = source.getFileSystem(new Configuration());
+      } catch (IOException e) {
+        throw new IllegalArgumentException("Cannot determine the file system of the source file.", e);
+      }
     }
   }
 }
