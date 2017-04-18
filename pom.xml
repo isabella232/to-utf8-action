@@ -66,7 +66,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>4.2.0-SNAPSHOT</cdap.version>
+    <cdap.version>4.1.1</cdap.version>
     <commons-lang.version>2.6</commons-lang.version>
     <guava.version>19.0</guava.version>
     <redshift-jdbc.version>1.2.1.1001</redshift-jdbc.version>
